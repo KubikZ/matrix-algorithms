@@ -43,6 +43,10 @@ def randomize_matrix(n):
     return [[uniform(1e-8, 1) for _ in range(n)] for _ in range(n)]
 
 
+def randomize_vec(n):
+    return [uniform(1e-8, 1) for _ in range(n)]
+
+
 def check_mat(C, C_test, tol=1e-9):
     return np.allclose(C, C_test, atol=tol)
 
