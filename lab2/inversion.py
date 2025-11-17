@@ -4,10 +4,8 @@ Recursive matrix inversion using block matrix inversion.
 
 import numpy as np
 import common
-from multiplication import strassen
 
-
-def recursive_inverse(A):
+def recursive_inverse(A, mat_mul_function):
     """
     Recursive matrix inversion using block matrix inversion.
     Divides the matrix into 2x2 blocks and recursively computes the inverse.
@@ -46,31 +44,31 @@ def recursive_inverse(A):
     A22 = A[mid:, mid:]
     
     # Recursively compute A22^(-1)
-    A22_inv = recursive_inverse(A22)
+    A22_inv = recursive_inverse(A22, mat_mul_function)
     
     # Compute Schur complement: S = A11 - A12 * A22^(-1) * A21
-    A22_inv_A21 = strassen(A22_inv, A21)
-    A12_A22_inv_A21 = strassen(A12, A22_inv_A21)
+    A22_inv_A21 = mat_mul_function(A22_inv, A21)
+    A12_A22_inv_A21 = mat_mul_function(A12, A22_inv_A21)
     S = common.mat_sub(A11, A12_A22_inv_A21)
     
     # Recursively compute S^(-1)
-    S_inv = recursive_inverse(S)
+    S_inv = recursive_inverse(S, mat_mul_function)
     
     # Compute block components
     # B11 = S^(-1)
     B11 = S_inv
     
     # B12 = -S^(-1) * A12 * A22^(-1)
-    A12_A22_inv = strassen(A12, A22_inv)
-    B12 = strassen(S_inv, A12_A22_inv)
-    # Negate B12 (B12 is already a new matrix from strassen, so no copy needed)
+    A12_A22_inv = mat_mul_function(A12, A22_inv)
+    B12 = mat_mul_function(S_inv, A12_A22_inv)
+    # Negate B12 (B12 is already a new matrix from mat_mul_function, so no copy needed)
     for row in range(B12.shape[0]):
         for col in range(B12.shape[1]):
             B12[row][col] = -B12[row][col]
             common.counter_sub += 1
     
     # B21 = -A22^(-1) * A21 * S^(-1)
-    A22_inv_A21_S_inv = strassen(A22_inv_A21, S_inv)
+    A22_inv_A21_S_inv = mat_mul_function(A22_inv_A21, S_inv)
     B21 = A22_inv_A21_S_inv.copy()  # Make a copy before negating
     # Negate B21
     for row in range(B21.shape[0]):
@@ -80,8 +78,8 @@ def recursive_inverse(A):
     
     # B22 = A22^(-1) + A22^(-1) * A21 * S^(-1) * A12 * A22^(-1)
     #     = A22^(-1) + A22_inv_A21_S_inv * A12 * A22^(-1)
-    A22_inv_A21_S_inv_A12 = strassen(A22_inv_A21_S_inv, A12)
-    A22_inv_A21_S_inv_A12_A22_inv = strassen(A22_inv_A21_S_inv_A12, A22_inv)
+    A22_inv_A21_S_inv_A12 = mat_mul_function(A22_inv_A21_S_inv, A12)
+    A22_inv_A21_S_inv_A12_A22_inv = mat_mul_function(A22_inv_A21_S_inv_A12, A22_inv)
     B22 = common.mat_add(A22_inv, A22_inv_A21_S_inv_A12_A22_inv)
     
     # Combine blocks into result

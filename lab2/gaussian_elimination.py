@@ -4,11 +4,10 @@ Recursive Gaussian elimination and determinant calculation.
 
 import numpy as np
 import common
-from multiplication import strassen
 from lu_factorization import forward_substitution, backward_substitution
 
 
-def recursive_gaussian_elimination(A, b=None):
+def recursive_gaussian_elimination(A, mat_mul_function, b=None):
     """
     Recursive Gaussian elimination (simplified version without pivoting for now).
     Uses LU factorization approach: A = L * U, then solve Ly = b, then Ux = y.
@@ -27,7 +26,7 @@ def recursive_gaussian_elimination(A, b=None):
     n = A.shape[0]
     
     # Use LU factorization
-    L, U = recursive_lu(A)
+    L, U = recursive_lu(A, mat_mul_function)
     
     P = np.eye(n)  # No pivoting in this version
     
@@ -83,7 +82,7 @@ def recursive_determinant(A):
     return det
 
 
-def recursive_determinant_block(A):
+def recursive_determinant_block(A, mat_mul_function):
     """
     Alternative recursive determinant using block matrix formula directly.
     This is less efficient but demonstrates the block approach.
@@ -112,13 +111,13 @@ def recursive_determinant_block(A):
     from inversion import recursive_inverse
     
     try:
-        A11_inv = recursive_inverse(A11)
-        A21_A11_inv = strassen(A21, A11_inv)
-        A21_A11_inv_A12 = strassen(A21_A11_inv, A12)
+        A11_inv = recursive_inverse(A11, mat_mul_function)
+        A21_A11_inv = mat_mul_function(A21, A11_inv)
+        A21_A11_inv_A12 = mat_mul_function(A21_A11_inv, A12)
         Schur = common.mat_sub(A22, A21_A11_inv_A12)
         
-        det_A11 = recursive_determinant_block(A11)
-        det_Schur = recursive_determinant_block(Schur)
+        det_A11 = recursive_determinant_block(A11, mat_mul_function)
+        det_Schur = recursive_determinant_block(Schur, mat_mul_function)
         
         common.counter_mul += 1
         return det_A11 * det_Schur

@@ -4,7 +4,6 @@ Recursive LU factorization using block LU decomposition.
 
 import numpy as np
 import common
-from multiplication import strassen
 from inversion import recursive_inverse
 
 
@@ -54,7 +53,7 @@ def backward_substitution(U, b):
     return x
 
 
-def recursive_lu(A):
+def recursive_lu(A, mat_mul_function):
     """
     Recursive LU factorization using block LU decomposition.
     Returns L (lower triangular) and U (upper triangular) such that A = L * U.
@@ -125,7 +124,7 @@ def recursive_lu(A):
     A22 = A[mid:, mid:]
     
     # Step 1: Recursively compute L11, U11 = LU(A11)
-    L11, U11 = recursive_lu(A11)
+    L11, U11 = recursive_lu(A11, mat_mul_function)
     
     # Step 2: Solve L11 * U12 = A12 for U12
     # This is equivalent to: U12 = L11^(-1) * A12
@@ -142,11 +141,11 @@ def recursive_lu(A):
     L21 = L21_T.T
     
     # Step 4: Compute Schur complement: S = A22 - L21 * U12
-    L21_U12 = strassen(L21, U12)
+    L21_U12 = mat_mul_function(L21, U12)
     S = common.mat_sub(A22, L21_U12)
     
     # Step 5: Recursively compute L22, U22 = LU(S)
-    L22, U22 = recursive_lu(S)
+    L22, U22 = recursive_lu(S, mat_mul_function)
     
     # Combine blocks
     L = np.zeros((n, n))
