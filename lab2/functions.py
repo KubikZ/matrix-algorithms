@@ -1,5 +1,73 @@
 import numpy as np
-from inversion import recursive_inverse
+import common
+
+def recursive_inverse(A, mat_mul):    
+    n = A.shape[0]
+    
+    if n == 1:
+        common.counter_mul += 1
+        inv = np.zeros((1, 1))
+        inv[0][0] = 1.0 / A[0][0]
+        return inv
+    
+    if n == 2:
+        det = A[0][0] * A[1][1] - A[0][1] * A[1][0]
+        common.counter_mul += 3
+        common.counter_sub += 1
+        
+        inv = np.zeros((2, 2))
+        inv[0][0] = A[1][1] / det
+        inv[0][1] = -A[0][1] / det
+        inv[1][0] = -A[1][0] / det
+        inv[1][1] = A[0][0] / det
+        common.counter_mul += 4
+        common.counter_sub += 2
+        return inv
+    
+    mid = n // 2
+    
+    A11 = A[:mid, :mid]
+    A12 = A[:mid, mid:]
+    A21 = A[mid:, :mid]
+    A22 = A[mid:, mid:]
+    
+    A22_inv = recursive_inverse(A22, mat_mul)
+    
+    A22_inv_A21 = mat_mul(A22_inv, A21)
+    A12_A22_inv_A21 = mat_mul(A12, A22_inv_A21)
+    S = common.mat_sub(A11, A12_A22_inv_A21)
+    
+    S_inv = recursive_inverse(S, mat_mul)
+    
+    B11 = S_inv
+    
+    A12_A22_inv = mat_mul(A12, A22_inv)
+    B12 = mat_mul(S_inv, A12_A22_inv)
+
+    for row in range(B12.shape[0]):
+        for col in range(B12.shape[1]):
+            B12[row][col] = -B12[row][col]
+            common.counter_sub += 1
+
+    A22_inv_A21_S_inv = mat_mul(A22_inv_A21, S_inv)
+    B21 = A22_inv_A21_S_inv.copy()
+
+    for row in range(B21.shape[0]):
+        for col in range(B21.shape[1]):
+            B21[row][col] = -B21[row][col]
+            common.counter_sub += 1
+    
+    A22_inv_A21_S_inv_A12 = mat_mul(A22_inv_A21_S_inv, A12)
+    A22_inv_A21_S_inv_A12_A22_inv = mat_mul(A22_inv_A21_S_inv_A12, A22_inv)
+    B22 = common.mat_add(A22_inv, A22_inv_A21_S_inv_A12_A22_inv)
+    
+    result = np.zeros((n, n))
+    result[:mid, :mid] = B11
+    result[:mid, mid:] = B12
+    result[mid:, :mid] = B21
+    result[mid:, mid:] = B22
+    
+    return result
 
 def LU_factorization(A, mat_mul):
 
@@ -16,11 +84,12 @@ def LU_factorization(A, mat_mul):
     A22 = A[k:, k:]
 
     L11, U11 = LU_factorization(A11, mat_mul)
-    U11_inv = recursive_inverse(U11)
+    U11_inv = recursive_inverse(U11, mat_mul)
     L21 = mat_mul(A21, U11_inv)
-    L11_inv = recursive_inverse(L11)
+    L11_inv = recursive_inverse(L11, mat_mul)
     U12 = mat_mul(L11_inv, A12)
     L22 = S = A22 - mat_mul(mat_mul(mat_mul(A21, U11_inv), L11_inv), A12)
+    common.counter_sub += 1
     Ls, Us = LU_factorization(S, mat_mul)
     U22 = Us
     L22 = Ls
@@ -57,15 +126,16 @@ def gaussian_elimination(A, b, mat_mul):
     b2 = b[k:]
 
     L11, U11 = LU_factorization(A11, mat_mul)
-    L11_inv = recursive_inverse(L11)
-    U11_inv = recursive_inverse(U11)
+    L11_inv = recursive_inverse(L11, mat_mul)
+    U11_inv = recursive_inverse(U11, mat_mul)
     S = A22 - mat_mul(mat_mul(mat_mul(A21, U11_inv), L11_inv), A12)
     Ls, Us = LU_factorization(S, mat_mul)
-    Ls_inv = recursive_inverse(Ls)
+    Ls_inv = recursive_inverse(Ls, mat_mul)
 
     RHS1 = mat_mul(L11_inv, b1)
     RHS2 = mat_mul(Ls_inv, b2) - mat_mul(mat_mul(mat_mul(mat_mul(Ls_inv, A21), U11_inv), L11_inv), b1)
-    RHS = np.vstack(RHS1, RHS2)
+    common.counter_sub += 1
+    RHS = np.vstack([RHS1, RHS2])
 
     U12 = mat_mul(L11_inv, A12)
     U22 = Us
@@ -77,7 +147,7 @@ def gaussian_elimination(A, b, mat_mul):
         [bottom_left_zero, U22]
     ])
 
-    U_inv = recursive_inverse(U)
+    U_inv = recursive_inverse(U, mat_mul)
 
     x = mat_mul(U_inv, RHS)
     
