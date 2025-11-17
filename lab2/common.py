@@ -80,7 +80,7 @@ def plot_all_metrics(step, time_counters, add_counters, sub_counters, mul_counte
     # Ops per time
     ops_per_time = []
     for a, s, m, t in zip(add_counters, sub_counters, mul_counters, time_counters):
-        denom = t if t > 0 else 1e-12
+        denom = t + 1
         ops_per_time.append((a + s + m) / denom)
     axs[1, 0].plot(x_values, ops_per_time, label="Operacje / czas", color='brown')
     axs[1, 0].set_xlabel("Rozmiar macierzy")

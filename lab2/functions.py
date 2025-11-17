@@ -152,3 +152,11 @@ def gaussian_elimination(A, b, mat_mul):
     x = mat_mul(U_inv, RHS)
     
     return x
+
+def determinant(A, mat_mul):
+    L, U = LU_factorization(A, mat_mul)
+    det_U = 1
+    for i in range(len(U)):
+        det_U *= U[i][i]  * L[i][i]
+
+    return det_U
