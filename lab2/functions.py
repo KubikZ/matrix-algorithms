@@ -10,63 +10,27 @@ def recursive_inverse(A, mat_mul):
         inv[0][0] = 1.0 / A[0][0]
         return inv
     
-    if n == 2:
-        det = A[0][0] * A[1][1] - A[0][1] * A[1][0]
-        common.counter_mul += 3
-        common.counter_sub += 1
-        
-        inv = np.zeros((2, 2))
-        inv[0][0] = A[1][1] / det
-        inv[0][1] = -A[0][1] / det
-        inv[1][0] = -A[1][0] / det
-        inv[1][1] = A[0][0] / det
-        common.counter_mul += 4
-        common.counter_sub += 2
-        return inv
+    k = n // 2
     
-    mid = n // 2
-    
-    A11 = A[:mid, :mid]
-    A12 = A[:mid, mid:]
-    A21 = A[mid:, :mid]
-    A22 = A[mid:, mid:]
-    
-    A22_inv = recursive_inverse(A22, mat_mul)
-    
-    A22_inv_A21 = mat_mul(A22_inv, A21)
-    A12_A22_inv_A21 = mat_mul(A12, A22_inv_A21)
-    S = common.mat_sub(A11, A12_A22_inv_A21)
-    
-    S_inv = recursive_inverse(S, mat_mul)
-    
-    B11 = S_inv
-    
-    A12_A22_inv = mat_mul(A12, A22_inv)
-    B12 = mat_mul(S_inv, A12_A22_inv)
+    A11 = A[:k, :k]
+    A12 = A[:k, k:]
+    A21 = A[k:, :k]
+    A22 = A[k:, k:]
 
-    for row in range(B12.shape[0]):
-        for col in range(B12.shape[1]):
-            B12[row][col] = -B12[row][col]
-            common.counter_sub += 1
+    A11_inv = recursive_inverse(A11, mat_mul)
+    S22 = A22 - mat_mul(mat_mul(A21, A11_inv), A12)
+    S22_inv = recursive_inverse(S22, mat_mul)
 
-    A22_inv_A21_S_inv = mat_mul(A22_inv_A21, S_inv)
-    B21 = A22_inv_A21_S_inv.copy()
+    B11 = A11_inv + mat_mul(mat_mul(mat_mul(mat_mul(A11_inv, A12), S22_inv), A21), A11_inv)
+    B12 = -mat_mul(mat_mul(A11_inv, A12), S22_inv)
+    B21 = -mat_mul(mat_mul(S22_inv, A21), A11_inv)
+    B22 = S22_inv
+    
+    result = np.block([
+        [B11, B12],
+        [B21, B22]
+    ])
 
-    for row in range(B21.shape[0]):
-        for col in range(B21.shape[1]):
-            B21[row][col] = -B21[row][col]
-            common.counter_sub += 1
-    
-    A22_inv_A21_S_inv_A12 = mat_mul(A22_inv_A21_S_inv, A12)
-    A22_inv_A21_S_inv_A12_A22_inv = mat_mul(A22_inv_A21_S_inv_A12, A22_inv)
-    B22 = common.mat_add(A22_inv, A22_inv_A21_S_inv_A12_A22_inv)
-    
-    result = np.zeros((n, n))
-    result[:mid, :mid] = B11
-    result[:mid, mid:] = B12
-    result[mid:, :mid] = B21
-    result[mid:, mid:] = B22
-    
     return result
 
 def LU_factorization(A, mat_mul):
